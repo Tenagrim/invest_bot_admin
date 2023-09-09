@@ -15,6 +15,7 @@ import * as PropTypes from "prop-types";
 import CardHeader from "react-bootstrap/CardHeader";
 
 const CHAPTERS_URL = 'http://localhost:5000/chapters';
+const API_URL = 'http://localhost:5000';
 
 function MenuItem(props) {
     return null;
@@ -70,12 +71,29 @@ export default function ChapterForm(props) {
 
     // console.log('Chapter:')
     // console.log(props.chapter)
+    let chapter = props.chapter;
+    let chapterText = props.chapter.text;
+    let buttons = props.chapter.chapterButtons.map((b, i) => ({...b, uid: i}));
 
+    const _setChapter = (ch) => {
+        chapter = ch;
+        props.setChapter(ch)
+    };
+    const _setChapterText = (t) => {
+        chapterText = t;
+        chapter.text = t;
+        props.setChapter(chapter);
+    };
+    const _setButtons = (btt) => {
+        buttons = btt;
+        chapter.buttons = btt;
+        props.setChapter(chapter)
+    };
 
-    const [buttons, _setButtons] = useState(props.chapter.chapterButtons.map((b, i) => ({...b, uid: i})))
-    const [chapter, _setChapter] = useState(props.chapter)
+    // const [buttons, _setButtons] = useState(props.chapter.chapterButtons.map((b, i) => ({...b, uid: i})))
+    // const [chapter, _setChapter] = useState(props.chapter)
     const [changed, setChanged] = useState(props.chapter.newChapter);
-    const [chapterText, _setChapterText] = useState(props.chapter.text)
+    // const [chapterText, _setChapterText] = useState(props.chapter.text)
 
     // useEffect(() => {
     //     console.log( '- Has changed');
@@ -98,12 +116,21 @@ export default function ChapterForm(props) {
         setChanged(true)
     }
 
+    const removeButton = (uid)=>{
+        let btts = buttons.filter(b=>b.uid!==uid);
+        btts.forEach((b,i)=>b.uid = i)
+        console.log('REMOVED: =========================')
+        console.log(btts)
+        setButtons(btts)
+    }
+
     const addButton = () => {
         let maxPLacement = buttons.length > 0 ? Math.max(...buttons.map(o => o.placement)) : 0;
         let maxUid = Math.max(...buttons.map(o => o.uid))
         let newButton = {
             id: null,
             text: '_____',
+            targetChapterId: chapter.itemId,
             placement: maxPLacement + 1,
             uid: maxUid + 1
         }
@@ -129,11 +156,11 @@ export default function ChapterForm(props) {
 
 
     const onSaveChapter = () => {
-        fetch(CHAPTERS_URL, {
+        console.log(chapter);
+        fetch(API_URL + '/chapters/save-chapters', {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                // 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: JSON.stringify({chapters: [chapter]})
         }).then(response => {
@@ -142,14 +169,19 @@ export default function ChapterForm(props) {
         })
             .then(data => {
                 console.log(data);
-                setChapter(data[0])
+                setChapter({...data[0], uid: chapter.uid})
                 setChanged(false)
-
             })
     }
     const onLoadChapter = () => {
         if (!!chapter.id) {
-            fetch(CHAPTERS_URL + '/' + chapter.id)
+            fetch(API_URL + '//chapters/get-chapter', {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({itemId: chapter.itemId, versionId: chapter.dataVersionId})
+            })
                 .then(response => {
                     console.log(response)
                     return response.json()
@@ -161,7 +193,7 @@ export default function ChapterForm(props) {
                 })
         }
     }
-    const onDeleteChapter = () => {
+    const onDeleteChapter = () => { // TODO
     }
 
     const ChapterButton = (props) => {
@@ -182,6 +214,9 @@ export default function ChapterForm(props) {
             buttonsCopy[index].placement = button.placement
             props.setButtons(buttonsCopy)
         }
+        const removeButton = () => {
+            props.removeButton(button.uid)
+        }
 
         const setButtonText = (text) => {
             let index = buttons.findIndex(x => x.uid === button.uid);
@@ -190,31 +225,50 @@ export default function ChapterForm(props) {
             props.setButtons(buttonsCopy)
         }
 
-        const setButtonTarget = (targetId) =>{
-            if(!!targetId && button.targetChapterId != targetId){
+        const setButtonTarget = (targetId) => {
+            if (!!targetId && button.targetChapterId !== targetId) {
                 button.targetChapterId = targetId;
                 updateButtons()
             }
         }
 
-        const chaptersList = props.chapters.map(c=><Dropdown.Item eventKey={c.id}>{'[' + c.id + '] ' + c.note}</Dropdown.Item>)
+        const chaptersList = props.chapters
+            .map(c =>
+                <Dropdown.Item
+                    eventKey={c.itemId}
+                    active={c.itemId === button.targetChapterId}>
+                    {'[' + c.itemId + '] ' + c.note}
+                </Dropdown.Item>)
 
         return (
-            <Dropdown as={ButtonGroup} className='w-100 m-1 row-cols-4 h-100' onSelect={function(evt){setButtonTarget(evt)}}>
-                {/*<Button variant="primary" className='col-10'>{props.text}</Button>*/}
-                <EditableText initialText={button.text} setText={setButtonText} setClass='btn btn-primary col-10'/>
-                <div className='bg-primary col-1 text-center text-white'>
-                    {button.placement}
+            <ButtonGroup className='w-100 row-cols-3 h-100'>
+
+                <EditableText initialText={button.text} setText={setButtonText} setClass='btn btn-primary col-9 text-center'/>
+
+                <div className='col-1 text-white text-center bg-primary'>
+                    <Row >
+                        <div className='bg-primary col-1 text-center text-white w-100'>
+                            {button.placement}
+                        </div>
+                    </Row>
+                    <Row>
+                        <span onClick={moveUp} className='btn btn-primary m-0 p-0 w-100 h-100' style={{fontSize: 10}}>▲</span>
+                    </Row>
+                    <Row>
+                        <span onClick={moveDown} className='btn btn-primary m-0 p-0 w-100 h-100' style={{fontSize: 10}}>▼</span>
+                    </Row>
                 </div>
-                <ButtonGroup vertical className='col-1'>
-                    <Button onClick={moveUp} className='pt-0 pb-0' style={{fontSize: 10}}>▲</Button>
-                    <Button onClick={moveDown} className='pt-0 pb-0' style={{fontSize: 10}}>▼</Button>
-                </ButtonGroup>
-                <Dropdown.Toggle split variant="primary" id="dropdown-split-basic" className='col-1'/>
-                <Dropdown.Menu className='w-100'>
-                    {chaptersList}
-                </Dropdown.Menu>
-            </Dropdown>
+                <Dropdown className='col-1' onSelect={function (evt) {setButtonTarget(evt)}}>
+                    <Dropdown.Toggle split variant="primary" id="dropdown-split-basic" className='rounded-0 h-100 p-1 w-100'/>
+                    <Dropdown.Menu className='w-100'>
+                        {chaptersList}
+                    </Dropdown.Menu>
+                </Dropdown>
+
+                <div className='col-1 btn btn-primary btn-outline-danger p-1' style={{fontSize: 10}} onClick={removeButton}>X</div>
+                {/*</Dropdown>*/}
+            </ButtonGroup>
+
         );
     }
 
@@ -232,7 +286,7 @@ export default function ChapterForm(props) {
     let buttons2 = buttonLists.map(l => {
         let btt = l.sort((a, b) => b.id - a.id).map(b => {
             return (<Col className='px-1 flex-grow-1'>
-                <ChapterButton button={b} buttons={buttons} chapters={props.chapters} setButtons={setButtons}/>
+                <ChapterButton button={b} buttons={buttons} chapters={props.chapters} setButtons={setButtons} removeButton={removeButton}/>
             </Col>);
         })
         return (
@@ -247,8 +301,9 @@ export default function ChapterForm(props) {
             <Card className={'h-100 ' + (changed ? 'bg-warning' : '')}>
                 <Card.Header>
                     <Row className='row-cols-2 w-100 mx-0 justify-content-between'>
-                        <Col >
-                            <p className='m-0' style={{fontSize: 15}}>{'['+(chapter.id == null ? '_' : chapter.id)+']'}</p>
+                        <Col>
+                            <p className='m-0'
+                               style={{fontSize: 15}}>{'[' + (chapter.itemId == null ? '_' : chapter.itemId) + ']'}</p>
                         </Col>
                         <Col className='col-3 align-self-end'>
                             <ButtonGroup>
@@ -256,8 +311,7 @@ export default function ChapterForm(props) {
                                         onClick={onLoadChapter}>🔃</Button>
                                 <Button className='btn-light btn-outline-secondary my-0 p-0' style={{fontSize: 15}}
                                         onClick={onSaveChapter}>💾</Button>
-                                <Button className='btn-light btn-outline-secondary my-0 p-0' style={{fontSize: 15}}
-                                        onClick={onDeleteChapter}>❌</Button>
+                                {/*<Button className='btn-light btn-outline-secondary my-0 p-0' style={{fontSize: 15}} onClick={onDeleteChapter}>❌</Button>*/}
                             </ButtonGroup>
                         </Col>
                     </Row>
@@ -275,24 +329,6 @@ export default function ChapterForm(props) {
                     <Col>
                         <Form.Control as="textarea" rows={3} className='m-1' value={chapterText}
                                       onChange={handleTextareaChange}/>
-                        {/*<Row className='px-1'>*/}
-                        {/*    <Col className='p-0'>*/}
-                        {/*        <ChapterButton text='Cделки'/>*/}
-                        {/*    </Col>*/}
-                        {/*    <Col className='p-0'>*/}
-                        {/*        <ChapterButton text='Мнооооооооого сделок'/>*/}
-                        {/*    </Col>*/}
-                        {/*    <Col className='p-0'>*/}
-                        {/*        <ChapterButton text='О Нас'/>*/}
-                        {/*    </Col>*/}
-
-                        {/*</Row>*/}
-                        {/*<Row className='px-1'>*/}
-                        {/*    <Col className='p-0'>*/}
-                        {/*        <ChapterButton text='Назад'/>*/}
-                        {/*    </Col>*/}
-
-                        {/*</Row>*/}
                         {buttons2}
                         <Row className='px-1'>
                             <Col className='p-0'>
