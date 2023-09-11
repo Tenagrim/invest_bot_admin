@@ -16,8 +16,7 @@ import MasksSelector from "./MarksSelector";
 import * as React from "react";
 // import CardHeader from "react-bootstrap/CardHeader";
 
-const CHAPTERS_URL = 'http://localhost:5000/chapters';
-const API_URL = 'http://45.90.219.203:5000';
+const API_URL = 'http://localhost:5000';
 
 function MenuItem(props) {
     return null;
@@ -32,7 +31,6 @@ const EditableText = (props) => {
     let text = props.initialText;
     const setText =(t)=>{text = t;props.setText(t)};
     const [isEditing, setIsEditing] = useState(false);
-    // const [text, setText] = useState(props.initialText);
 
 
     const handleDoubleClick = () => {
