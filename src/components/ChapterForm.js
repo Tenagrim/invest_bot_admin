@@ -12,7 +12,9 @@ import {
     ToggleButton
 } from "react-bootstrap";
 import * as PropTypes from "prop-types";
-import CardHeader from "react-bootstrap/CardHeader";
+import MasksSelector from "./MarksSelector";
+import * as React from "react";
+// import CardHeader from "react-bootstrap/CardHeader";
 
 const CHAPTERS_URL = 'http://localhost:5000/chapters';
 const API_URL = 'http://localhost:5000';
@@ -27,8 +29,11 @@ MenuItem.propTypes = {
 };
 
 const EditableText = (props) => {
+    let text = props.initialText;
+    const setText =(t)=>{text = t;props.setText(t)};
     const [isEditing, setIsEditing] = useState(false);
-    const [text, setText] = useState(props.initialText);
+    // const [text, setText] = useState(props.initialText);
+
 
     const handleDoubleClick = () => {
         setIsEditing(true);
@@ -72,8 +77,31 @@ export default function ChapterForm(props) {
     // console.log('Chapter:')
     // console.log(props.chapter)
     let chapter = props.chapter;
+    let changed = props.chapter.changed;
     let chapterText = props.chapter.text;
     let buttons = props.chapter.chapterButtons.map((b, i) => ({...b, uid: i}));
+
+    // const [changed, setChanged] = useState(props.chapter.newChapter);
+    const setChanged = (c)=>{
+        changed = c;
+        chapter.changed = c;
+        props.setChapter(chapter);
+    }
+
+
+    const setMark =(markId)=>{
+        let newKey = (1<<markId) | chapter.marksKey;
+        chapter.marksKey = newKey
+        props.setChapter(chapter);
+        setChanged(true)
+    }
+
+    const unsetMark =(markId)=>{
+        let newKey = (~(1<<markId)) & chapter.marksKey;
+        chapter.marksKey = newKey
+        props.setChapter(chapter);
+        setChanged(true)
+    }
 
     const _setChapter = (ch) => {
         chapter = ch;
@@ -90,15 +118,6 @@ export default function ChapterForm(props) {
         props.setChapter(chapter)
     };
 
-    // const [buttons, _setButtons] = useState(props.chapter.chapterButtons.map((b, i) => ({...b, uid: i})))
-    // const [chapter, _setChapter] = useState(props.chapter)
-    const [changed, setChanged] = useState(props.chapter.newChapter);
-    // const [chapterText, _setChapterText] = useState(props.chapter.text)
-
-    // useEffect(() => {
-    //     console.log( '- Has changed');
-    //     // setChanged(true)
-    // },[buttons])
     const setChapter = (chapter) => {
         setChapterText(chapter.text);
         setButtons(chapter.chapterButtons.map((b, i) => ({...b, uid: i})));
@@ -140,9 +159,12 @@ export default function ChapterForm(props) {
         setChanged(true);
     }
     const setNoteText = (text) => {
-        chapter.note = text;
-        setChapter(chapter)
-        setChanged(true)
+        if (text !== chapterText) {
+            chapter.note = text;
+            chapter.changed = true;
+            setChapter(chapter)
+        }
+        // setChanged(true)
     }
 
     const handleTextareaChange = (event) => {
@@ -169,8 +191,7 @@ export default function ChapterForm(props) {
         })
             .then(data => {
                 console.log(data);
-                setChapter({...data[0], uid: chapter.uid})
-                setChanged(false)
+                setChapter({...data[0], uid: chapter.uid, changed: false});
             })
     }
     const onLoadChapter = () => {
@@ -187,9 +208,9 @@ export default function ChapterForm(props) {
                     return response.json()
                 })
                 .then(data => {
-                    setChapter(data);
+                    setChapter({...data, uid: chapter.uid, changed: false});
                     //  setChapterText(chapter.text)
-                    setChanged(false);
+                    // setChanged(false);
                 })
         }
     }
@@ -198,7 +219,21 @@ export default function ChapterForm(props) {
 
     const ChapterButton = (props) => {
         // console.log(props)
+        let _inputWasClicked = false;
         const [button, setButton] = useState(props.button)
+        const [filterKey, setFilterKey] = useState(0)
+        const [open, setOpen] = useState(false);
+
+        const setMark =(markId)=>{
+            let newKey = (1<<markId) | filterKey;
+            setFilterKey(newKey);
+        }
+
+        const unsetMark =(markId)=>{
+            let newKey = (~(1<<markId)) & filterKey;
+            setFilterKey(newKey);
+        }
+
         const moveUp = () => {
             button.placement = button.placement - 1;
             updateButtons()
@@ -231,8 +266,20 @@ export default function ChapterForm(props) {
                 updateButtons()
             }
         }
+        const onToggle= function(open) {
+            if (_inputWasClicked) {
+                _inputWasClicked = false;
+                return;
+            }
+            setOpen(open);
+        };
+        const inputWasClicked= function() {
+            _inputWasClicked = true;
+        }
+
 
         const chaptersList = props.chapters
+            .filter(ch=>filterKey==0||ch.marksKey===filterKey)
             .map(c =>
                 <Dropdown.Item
                     eventKey={c.itemId}
@@ -258,9 +305,23 @@ export default function ChapterForm(props) {
                         <span onClick={moveDown} className='btn btn-primary m-0 p-0 w-100 h-100' style={{fontSize: 10}}>▼</span>
                     </Row>
                 </div>
-                <Dropdown className='col-1' onSelect={function (evt) {setButtonTarget(evt)}}>
+                <Dropdown
+                    className='col-1'
+                    onSelect={function (evt) {setButtonTarget(evt)}}
+                    open={open}
+                    onToggle={onToggle}>
                     <Dropdown.Toggle split variant="primary" id="dropdown-split-basic" className='rounded-0 h-100 p-1 w-100'/>
                     <Dropdown.Menu className='w-100'>
+                        <MasksSelector
+                            marksList={props.marksList}
+                            marksKey={filterKey}
+                            setMark={setMark}
+                            unSetMark={unsetMark}
+                            fontSize={12}
+                            onSelect={inputWasClicked}
+                            onClick={(e)=>{    e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();}}
+                        />
                         {chaptersList}
                     </Dropdown.Menu>
                 </Dropdown>
@@ -286,7 +347,14 @@ export default function ChapterForm(props) {
     let buttons2 = buttonLists.map(l => {
         let btt = l.sort((a, b) => b.id - a.id).map(b => {
             return (<Col className='px-1 flex-grow-1'>
-                <ChapterButton button={b} buttons={buttons} chapters={props.chapters} setButtons={setButtons} removeButton={removeButton}/>
+                <ChapterButton
+                    button={b}
+                    buttons={buttons}
+                    chapters={props.chapters}
+                    setButtons={setButtons}
+                    removeButton={removeButton}
+                    marksList={props.marksList}
+                />
             </Col>);
         })
         return (
@@ -300,12 +368,21 @@ export default function ChapterForm(props) {
         <Container className='bg-light rounded-3 m-1 p-2 h-100'>
             <Card className={'h-100 ' + (changed ? 'bg-warning' : '')}>
                 <Card.Header>
-                    <Row className='row-cols-2 w-100 mx-0 justify-content-between'>
-                        <Col>
+                    <Row className='row-cols-3 w-100 mx-0 justify-content-between'>
+                        <Col className='col-auto p-0'>
                             <p className='m-0'
                                style={{fontSize: 15}}>{'[' + (chapter.itemId == null ? '_' : chapter.itemId) + ']'}</p>
                         </Col>
-                        <Col className='col-3 align-self-end'>
+                        <Col className='col-8'>
+                            <MasksSelector
+                                marksList={props.marksList}
+                                marksKey={chapter.marksKey}
+                                setMark={setMark}
+                                unSetMark={unsetMark}
+                                fontSize={12}
+                            />
+                        </Col>
+                        <Col className='col-2 align-self-end'>
                             <ButtonGroup>
                                 <Button className='btn-light btn-outline-secondary my-0 p-0' style={{fontSize: 15}}
                                         onClick={onLoadChapter}>🔃</Button>
