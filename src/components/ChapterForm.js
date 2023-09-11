@@ -17,7 +17,7 @@ import * as React from "react";
 // import CardHeader from "react-bootstrap/CardHeader";
 
 const CHAPTERS_URL = 'http://localhost:5000/chapters';
-const API_URL = 'http://localhost:5000';
+const API_URL = 'http://45.90.219.203:5000';
 
 function MenuItem(props) {
     return null;
@@ -279,7 +279,7 @@ export default function ChapterForm(props) {
 
 
         const chaptersList = props.chapters
-            .filter(ch=>filterKey==0||ch.marksKey===filterKey)
+            .filter(ch=>filterKey===0 || (ch.marksKey&filterKey))
             .map(c =>
                 <Dropdown.Item
                     eventKey={c.itemId}
