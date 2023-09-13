@@ -26,9 +26,10 @@ MenuItem.propTypes = {
 };
 
 const EditableText = (props) => {
-    let text = props.initialText;
-    const setText =(t)=>{text = t;props.setText(t)};
+    // let text = props.initialText;
+    // const setText =(t)=>{text = t;};
     const [isEditing, setIsEditing] = useState(false);
+    const [text, setText] = useState(props.initialText);
 
 
     const handleDoubleClick = () => {
@@ -219,6 +220,7 @@ export default function ChapterForm(props) {
         const [button, setButton] = useState(props.button)
         const [filterKey, setFilterKey] = useState(0)
         const [open, setOpen] = useState(false);
+        const [filterString, setFilterString] = useState('')
 
         const setMark =(markId)=>{
             let newKey = (1<<markId) | filterKey;
@@ -254,6 +256,8 @@ export default function ChapterForm(props) {
             let buttonsCopy = [...props.buttons]
             buttonsCopy[index].text = text
             props.setButtons(buttonsCopy)
+            // button.text = text;
+            // setButton(button);
         }
 
         const setButtonTarget = (targetId) => {
@@ -275,7 +279,8 @@ export default function ChapterForm(props) {
 
 
         const chaptersList = props.chapters
-            .filter(ch=>filterKey===0 || (ch.marksKey&filterKey))
+            .filter(ch=>(filterKey===0 || (ch.marksKey&filterKey))&&
+                (filterString ==='' || ch.note.toLowerCase().includes(filterString.toLowerCase())))
             .map(c =>
                 <Dropdown.Item
                     eventKey={c.itemId}
@@ -286,9 +291,38 @@ export default function ChapterForm(props) {
         return (
             <ButtonGroup className='w-100 row-cols-3 h-100'>
 
-                <EditableText initialText={button.text} setText={setButtonText} setClass='btn btn-primary col-9 text-center'/>
+                <Dropdown
+                    className='col-1'
+                    onSelect={function (evt) {setButtonTarget(Number(evt))}}
+                    open={open}
+                    onToggle={onToggle}>
+                    <Dropdown.Toggle split variant="primary" id="dropdown-split-basic" className=' h-100 p-1 w-100'/>
+                    <Dropdown.Menu className='w-100'>
+                        <Row>
+                            <Col className='col-12'>
+                                <Form.Control className=''
+                                    onChange={e=>setFilterString(e.target.value)}></Form.Control>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col className='col-12'>
+                                <MasksSelector
+                                    marksList={props.marksList}
+                                    marksKey={filterKey}
+                                    setMark={setMark}
+                                    unSetMark={unsetMark}
+                                    fontSize={12}
+                                    onSelect={inputWasClicked}
+                                    onClick={(e)=>{    e.stopPropagation();
+                                        e.nativeEvent.stopImmediatePropagation();}}
+                                />
+                            </Col>
+                        </Row>
 
-                <div className='col-1 text-white text-center bg-primary'>
+                        {chaptersList}
+                    </Dropdown.Menu>
+                </Dropdown>
+                <div className='col-1 text-white text-center bg-primary '>
                     <Row >
                         <div className='bg-primary col-1 text-center text-white w-100'>
                             {button.placement}
@@ -301,26 +335,7 @@ export default function ChapterForm(props) {
                         <span onClick={moveDown} className='btn btn-primary m-0 p-0 w-100 h-100' style={{fontSize: 10}}>▼</span>
                     </Row>
                 </div>
-                <Dropdown
-                    className='col-1'
-                    onSelect={function (evt) {setButtonTarget(evt)}}
-                    open={open}
-                    onToggle={onToggle}>
-                    <Dropdown.Toggle split variant="primary" id="dropdown-split-basic" className='rounded-0 h-100 p-1 w-100'/>
-                    <Dropdown.Menu className='w-100'>
-                        <MasksSelector
-                            marksList={props.marksList}
-                            marksKey={filterKey}
-                            setMark={setMark}
-                            unSetMark={unsetMark}
-                            fontSize={12}
-                            onSelect={inputWasClicked}
-                            onClick={(e)=>{    e.stopPropagation();
-                                e.nativeEvent.stopImmediatePropagation();}}
-                        />
-                        {chaptersList}
-                    </Dropdown.Menu>
-                </Dropdown>
+                <EditableText initialText={button.text} setText={setButtonText} setClass='btn btn-primary col-9 text-center'/>
 
                 <div className='col-1 btn btn-primary btn-outline-danger p-1' style={{fontSize: 10}} onClick={removeButton}>X</div>
                 {/*</Dropdown>*/}
