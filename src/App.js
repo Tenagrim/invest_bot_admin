@@ -1,6 +1,6 @@
 import './App.css';
 import ChapterForm from "./components/ChapterForm";
-import {Button, Col, Container, Row, Card, ButtonGroup} from "react-bootstrap";
+import {Button, Col, Container, Row, Card, ButtonGroup, Form} from "react-bootstrap";
 import * as React from "react";
 import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
@@ -31,16 +31,6 @@ const AppHeader = (props) => {
         );
     }
 
-    // const setMark = (markId)=>{
-    //     let newKey = (1<<markId) | marksKey;
-    //     setMarksKey(newKey);
-    // }
-    // const unsetMark = (markId)=>{
-    //     // let newKey = (~(1<<markId)) & marksKey;
-    //     // setMarksKey(newKey);
-    // }
-
-
     return (
         <Container>
             <Row>
@@ -64,6 +54,9 @@ const AppHeader = (props) => {
                             Добавить версию
                         </Dropdown.Item>
                     </DropdownButton>
+                </Col>
+                <Col className='col-3'>
+                    <Form.Control onChange={e=>props.setFilterString(e.target.value)}></Form.Control>
                 </Col>
                 <Col className='col-auto'>
                     <MasksSelector
@@ -89,6 +82,7 @@ class App extends React.Component {
             chapters: [],
             botConfig: {chapterMarks:[]},
             filterMarksKey: 0,
+            filterString:'',
             filterMarks: [
                 {id:0, key:1, name:'Метка 1'},
                 {id:0, key:2, name:'Метка 2'},
@@ -106,28 +100,35 @@ class App extends React.Component {
         this.setChapter = this.setChapter.bind(this)
         this.setFilterMark = this.setFilterMark.bind(this)
         this.unsetFilterMark = this.unsetFilterMark.bind(this)
+        this.setFilterString = this.setFilterString.bind(this)
     }
 
 
+    setFilterString(str){
+        this.filterChapters(this.state.filterMarksKey, str);
+        this.setState({filterString:str})
+    }
+
     setFilterMark (markKey){
         let newKey = (1<<markKey) | this.state.filterMarksKey;
-        this.filterChapters(newKey);
+        this.filterChapters(newKey,this.state.filterString);
         this.setState({filterMarksKey:newKey})
     }
     unsetFilterMark (markKey){
         let newKey = (~(1<<markKey)) & this.state.filterMarksKey;
-        this.filterChapters(newKey);
+        this.filterChapters(newKey, this.state.filterString);
         this.setState({filterMarksKey:newKey})
     }
 
-    filterChapters(key){
+    filterChapters(key, str){
+        let newChapters = this.chapters
         if (key !== 0){
-           let newChapters = this.chapters.filter(ch=>ch.marksKey & key);
-           this.setState({chapters:newChapters})
+            newChapters = newChapters.filter(ch=> (ch.marksKey & key));
         }
-        else{
-            this.setState({chapters:this.chapters})
+        if (!!str && str !== ''){
+            newChapters = newChapters.filter(ch=> (ch.note.toLowerCase().includes(str.toLowerCase())));
         }
+        this.setState({chapters:newChapters})
     }
 
     mapChapters(chapters){
@@ -236,7 +237,7 @@ class App extends React.Component {
         // let chapters = [...this.chapters];
         let index = this.chapters.findIndex(x => x.uid === chapter.uid);
         this.chapters[index] = chapter
-        this.filterChapters(this.state.filterMarksKey)
+        this.filterChapters(this.state.filterMarksKey, this.state.filterString)
 
         // this.setState({chapters:chapters});
     }
@@ -265,6 +266,7 @@ class App extends React.Component {
                     marksKey={this.state.filterMarksKey}
                     setMark={this.setFilterMark}
                     unsetMark={this.unsetFilterMark}
+                    setFilterString={this.setFilterString}
                 />
                 <Container className='bg-light'>
                     <Row>

@@ -7,9 +7,7 @@ import {
     Container,
     Dropdown,
     Form,
-    Row,
-    SplitButton,
-    ToggleButton
+    Row
 } from "react-bootstrap";
 import * as PropTypes from "prop-types";
 import MasksSelector from "./MarksSelector";
