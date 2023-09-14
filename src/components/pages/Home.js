@@ -141,17 +141,11 @@ class Home extends React.Component {
     }
 
     addVersion(){
-        fetch(API_URL + '/config/createVersionFromCurrent',{
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({sysName: BOT_SYSNAME})
-        }).then(response => {
-            return response.json()
-        }).then(botConf=>{
-            this.setState({botConfig: botConf})
-            this.updateChapters(botConf);
+        API.post('/config/createVersionFromCurrent',{
+            sysName: BOT_SYSNAME
+        }).then(resp=>{
+            this.setState({botConfig: resp.data})
+            this.updateChapters(resp.data);
         })
     }
 
@@ -159,12 +153,9 @@ class Home extends React.Component {
         API.post('/config/setCurrentVersion',
             {sysName: BOT_SYSNAME, targetVersionId: targetVersionId},)
             .then(resp => {
-            fetch(API_URL + '/chapters/' + resp.data.currentVersion.id)
-                .then(response => {
-                    return response.json()
-                })
-                .then(chs => {
-                    let newState = {botConfig: resp.data, chapters: this.mapChapters(chs)}
+                API.get('/chapters/' + resp.data.currentVersion.id)
+                    .then(s_resp => {
+                    let newState = {botConfig: resp.data, chapters: this.mapChapters(s_resp.data)}
                     this.setState(newState, ()=>{
                         console.log('SET STATE ========================');
                         console.log(newState);

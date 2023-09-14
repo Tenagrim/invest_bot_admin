@@ -12,7 +12,7 @@ import {
 import * as PropTypes from "prop-types";
 import MasksSelector from "./MarksSelector";
 import * as React from "react";
-import {API_URL} from "./AxiosInterceptor";
+import {API, API_URL} from "./AxiosInterceptor";
 
 function MenuItem(props) {
     return null;
@@ -174,38 +174,19 @@ export default function ChapterForm(props) {
 
     const onSaveChapter = () => {
         console.log(chapter);
-        fetch(API_URL + '/chapters/save-chapters', {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({chapters: [chapter]})
-        }).then(response => {
-            console.log(response)
-            return response.json()
-        })
-            .then(data => {
-                console.log(data);
-                setChapter({...data[0], uid: chapter.uid, changed: false});
+        API.post('/chapters/save-chapters',
+            {chapters: [chapter]})
+            .then(resp => {
+                console.log(resp.data);
+                setChapter({...resp.data[0], uid: chapter.uid, changed: false});
             })
     }
     const onLoadChapter = () => {
         if (!!chapter.id) {
-            fetch(API_URL + '//chapters/get-chapter', {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({itemId: chapter.itemId, versionId: chapter.dataVersionId})
-            })
-                .then(response => {
-                    console.log(response)
-                    return response.json()
-                })
-                .then(data => {
-                    setChapter({...data, uid: chapter.uid, changed: false});
-                    //  setChapterText(chapter.text)
-                    // setChanged(false);
+            API.post('/chapters/get-chapter',
+                {itemId: chapter.itemId, versionId: chapter.dataVersionId}
+                ).then(resp => {
+                    setChapter({...resp.data, uid: chapter.uid, changed: false});
                 })
         }
     }
