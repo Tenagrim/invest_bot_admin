@@ -74,7 +74,7 @@ const AppHeader = (props) => {
                     />
                 </Col>
                 <Col className='col-1 float-end'>
-                    <Button onClick={onLogout} >LogOut</Button>
+                    <Button onClick={onLogout} className='btn-light btn-outline-secondary' >LogOut</Button>
                 </Col>
             </Row>
         </Container>
