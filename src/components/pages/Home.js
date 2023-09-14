@@ -1,27 +1,28 @@
-import './App.css';
-import ChapterForm from "./components/ChapterForm";
+import '../../App.css';
+import ChapterForm from "../ChapterForm";
 import {Button, Col, Container, Row, Card, ButtonGroup, Form} from "react-bootstrap";
 import * as React from "react";
 import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
-import MasksSelector from "./components/MarksSelector";
-import {useState} from "react";
+import MasksSelector from "../MarksSelector";
+import {API, API_URL} from "../AxiosInterceptor";
+import {useNavigate} from "react-router-dom";
 
 
-const API_URL = 'http://localhost:5000';
 const BOT_SYSNAME = "INVEST_BOT";
 
 const AppHeader = (props) => {
+    const navigate = useNavigate();
     const botConfig =props.botConfig;
 
     let versions = []
 
     let note = ''
 
-    if (!!botConfig.currentVersion) {
+    if (!!botConfig&& !!botConfig.currentVersion) {
         note = botConfig.currentVersion.note;
     }
-    if (!!botConfig.botConfigVersion) {
+    if (!!botConfig&&!!botConfig.botConfigVersion) {
         console.log('bot config:');
         console.log(botConfig);
         versions = botConfig.botConfigVersion.dataVersions.sort((a,b)=>a.id-b.id).map(v =>
@@ -31,10 +32,15 @@ const AppHeader = (props) => {
         );
     }
 
+    const onLogout =()=>{
+        localStorage.removeItem("token");
+        navigate('/login');
+    }
+
     return (
         <Container>
-            <Row>
-                <Col className='col-auto float-end'>
+            <Row className=''>
+                <Col className='col-auto'>
                     <DropdownButton
                         onSelect={event=>{
                             if(event === 'new')
@@ -67,32 +73,26 @@ const AppHeader = (props) => {
                         style={{fontSize: 1}}
                     />
                 </Col>
+                <Col className='col-1 float-end'>
+                    <Button onClick={onLogout} >LogOut</Button>
+                </Col>
             </Row>
         </Container>
     );
 }
 
-class App extends React.Component {
+class Home extends React.Component {
 
     constructor(props) {
         super(props);
-        let chapters=[]
-
+        this.chapters=[];
+        this.token = '';
         this.state = {
             chapters: [],
-            botConfig: {chapterMarks:[]},
+            botConfig: {
+                chapterMarks:[]},
             filterMarksKey: 0,
-            filterString:'',
-            filterMarks: [
-                {id:0, key:1, name:'Метка 1'},
-                {id:0, key:2, name:'Метка 2'},
-                {id:0, key:3, name:'Метка 3'},
-                {id:0, key:4, name:'Метка 4'},
-                {id:0, key:5, name:'Метка 5'},
-                {id:0, key:6, name:'Метка 6'},
-                {id:0, key:7, name:'Метка 7'},
-                {id:0, key:8, name:'Метка 8'}
-            ]
+            filterString:''
         }
         this.addChapter = this.addChapter.bind(this)
         this.addVersion = this.addVersion.bind(this)
@@ -156,21 +156,15 @@ class App extends React.Component {
     }
 
     setVersion(targetVersionId){
-        fetch(API_URL + '/config/setCurrentVersion',{
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({sysName: BOT_SYSNAME, targetVersionId: targetVersionId})
-        }).then(response => {
-            return response.json()
-        }).then(botConf => {
-            fetch(API_URL + '/chapters/' + botConf.currentVersion.id)
+        API.post('/config/setCurrentVersion',
+            {sysName: BOT_SYSNAME, targetVersionId: targetVersionId},)
+            .then(resp => {
+            fetch(API_URL + '/chapters/' + resp.data.currentVersion.id)
                 .then(response => {
                     return response.json()
                 })
                 .then(chs => {
-                    let newState = {botConfig: botConf, chapters: this.mapChapters(chs)}
+                    let newState = {botConfig: resp.data, chapters: this.mapChapters(chs)}
                     this.setState(newState, ()=>{
                         console.log('SET STATE ========================');
                         console.log(newState);
@@ -181,56 +175,49 @@ class App extends React.Component {
     }
 
     updateChapters(config){
-        fetch(API_URL + '/chapters/' + config.currentVersion.id)
-            .then(response => {
-                return response.json()
-            })
-            .then(data => {
-                let chs = this.mapChapters(data)
-                this.chapters = chs;
-                this.setState({chapters: chs});
-            })
+        if (!!config.currentVersion) {
+            API.get('/chapters/' + config.currentVersion.id,)
+                .then(resp => {
+                    let chs = this.mapChapters(resp.data)
+                    this.chapters = chs;
+                    this.setState({chapters: chs});
+                })
+        }
     }
 
     componentDidMount() {
-        fetch(API_URL + '/config/getBySysName', {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({sysName: BOT_SYSNAME})
-        }).then(response => {
-            return response.json()
-        })
-        .then(data => {
-            this.setState({botConfig: data});
-            // console.log('---------------------')
-            // console.log(this.state.botConfig);
-            // console.log(data);
-            this.updateChapters(data);
+        API.post('/config/getBySysName',{
+            sysName: BOT_SYSNAME
+        }).then(resp => {
+            this.setState({botConfig: resp.data});
+            this.updateChapters(resp.data);
+        }).catch(()=>{
+            console.error("something went wrong")
         })
     }
 
     addChapter() {
         // console.log(this.state.botConfig);
-        let newChapter = {
-            id: null,
-            text: 'Новый раздел',
-            note: 'Новый раздел',
-            chapterButtons: [],
-            chapterAttachements:[],
-            changed: true,
-            dataVersionId: this.state.botConfig.currentVersion.id,
-            chapterTypeId: 1, // TODO
-            marksKey: 0,
-            itemId: null,
-            uid:  this.chapters.length + 1
+        if (!!this.state.botConfig.currentVersion) {
+            let newChapter = {
+                id: null,
+                text: 'Новый раздел',
+                note: 'Новый раздел',
+                chapterButtons: [],
+                chapterAttachements: [],
+                changed: true,
+                dataVersionId: this.state.botConfig.currentVersion.id,
+                chapterTypeId: 1, // TODO
+                marksKey: 0,
+                itemId: null,
+                uid: this.chapters.length + 1
+            }
+            let chapters = [...this.chapters]
+            chapters.push(newChapter)
+            this.chapters.push(newChapter)
+            // console.log(chapters)
+            this.setState({chapters: chapters})
         }
-        let chapters = [...this.chapters]
-        chapters.push(newChapter)
-        this.chapters.push(newChapter)
-        // console.log(chapters)
-        this.setState({chapters: chapters})
     }
 
     setChapter(chapter){
@@ -251,7 +238,7 @@ class App extends React.Component {
                              chapter={c}
                              chapters={this.chapters}
                              setChapter={this.setChapter}
-                             marksList={this.state.botConfig.chapterMarks}
+                             marksList={!!this.state.botConfig? this.state.botConfig.chapterMarks:[]}
                 />
             </Col>
         )
@@ -262,7 +249,7 @@ class App extends React.Component {
                     botConfig={this.state.botConfig}
                     setVersion={this.setVersion}
                     addVersion={this.addVersion}
-                    marksList={this.state.botConfig.chapterMarks}
+                    marksList={!!this.state.botConfig? this.state.botConfig.chapterMarks:[]}
                     marksKey={this.state.filterMarksKey}
                     setMark={this.setFilterMark}
                     unsetMark={this.unsetFilterMark}
@@ -286,4 +273,4 @@ class App extends React.Component {
     }
 }
 
-export default App;
+export default Home;

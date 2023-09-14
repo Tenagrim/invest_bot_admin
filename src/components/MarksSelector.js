@@ -6,37 +6,41 @@ import * as React from "react";
 export default function MasksSelector(props) {
     const [open, setOpen] = useState(false);
     const defaultFontSize = 15;
-    const activeMarks = props.marksList
-        .filter(m => ((1 << m.key) & props.marksKey))
-        .sort((a,b)=>a.key-b.key)
-        .map(m => {
-            return (
-                <Col className='col-auto p-0'>
-                    <Button className='btn-light btn-outline-secondary p-1 w-100'
-                            style={{fontSize: !!props.fontSize?props.fontSize:defaultFontSize}}
-                            onClick={() => props.unSetMark(m.key)}>{m.name}</Button>
-                </Col>
-            );
-        });
+    let activeMarks = [];
+    let inactiveMarks = [];
+    if (!!props.marksList) {
+         activeMarks = props.marksList
+            .filter(m => ((1 << m.key) & props.marksKey))
+            .sort((a, b) => a.key - b.key)
+            .map(m => {
+                return (
+                    <Col className='col-auto p-0'>
+                        <Button className='btn-light btn-outline-secondary p-1 w-100'
+                                style={{fontSize: !!props.fontSize ? props.fontSize : defaultFontSize}}
+                                onClick={() => props.unSetMark(m.key)}>{m.name}</Button>
+                    </Col>
+                );
+            });
+        inactiveMarks = props.marksList
+            .filter(m => !((1 << m.key) & props.marksKey))
+            .sort((a,b)=>a.key-b.key)
+            .map(m => {
+                return (
+                    <Dropdown.Item
+                        eventKey={m.key}
+                        onClick={(e)=>{
+                            props.setMark(m.key);
+                            setOpen(false);
+                            if(!!props.onClick)
+                                props.onClick(e);
+                        }}
+                    >
+                        {m.name}
+                    </Dropdown.Item>
+                );
+            });
+    }
 
-    const inactiveMarks = props.marksList
-        .filter(m => !((1 << m.key) & props.marksKey))
-        .sort((a,b)=>a.key-b.key)
-        .map(m => {
-        return (
-            <Dropdown.Item
-                eventKey={m.key}
-                onClick={(e)=>{
-                    props.setMark(m.key);
-                    setOpen(false);
-                    if(!!props.onClick)
-                        props.onClick(e);
-                }}
-            >
-                {m.name}
-            </Dropdown.Item>
-        );
-    })
     return (
         <div>
             <Container>

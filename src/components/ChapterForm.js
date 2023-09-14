@@ -12,9 +12,7 @@ import {
 import * as PropTypes from "prop-types";
 import MasksSelector from "./MarksSelector";
 import * as React from "react";
-// import CardHeader from "react-bootstrap/CardHeader";
-
-const API_URL = 'http://localhost:5000';
+import {API_URL} from "./AxiosInterceptor";
 
 function MenuItem(props) {
     return null;
@@ -356,9 +354,10 @@ export default function ChapterForm(props) {
     // console.log(JSON.stringify(buttonLists));
 
     let buttons2 = buttonLists.map(l => {
-        let btt = l.sort((a, b) => b.id - a.id).map(b => {
+        let btt = l.sort((a, b) => b.id - a.id).map((b, i) => {
             return (<Col className='px-1 flex-grow-1'>
                 <ChapterButton
+                    key={b.id}
                     button={b}
                     buttons={buttons}
                     chapters={props.chapters}
