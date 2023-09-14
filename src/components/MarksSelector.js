@@ -12,9 +12,9 @@ export default function MasksSelector(props) {
          activeMarks = props.marksList
             .filter(m => ((1 << m.key) & props.marksKey))
             .sort((a, b) => a.key - b.key)
-            .map(m => {
+            .map((m,i) => {
                 return (
-                    <Col className='col-auto p-0'>
+                    <Col key={i} className='col-auto p-0'>
                         <Button className='btn-light btn-outline-secondary p-1 w-100'
                                 style={{fontSize: !!props.fontSize ? props.fontSize : defaultFontSize}}
                                 onClick={() => props.unSetMark(m.key)}>{m.name}</Button>
@@ -24,9 +24,9 @@ export default function MasksSelector(props) {
         inactiveMarks = props.marksList
             .filter(m => !((1 << m.key) & props.marksKey))
             .sort((a,b)=>a.key-b.key)
-            .map(m => {
+            .map((m,i) => {
                 return (
-                    <Dropdown.Item
+                    <Dropdown.Item key={i}
                         eventKey={m.key}
                         onClick={(e)=>{
                             props.setMark(m.key);

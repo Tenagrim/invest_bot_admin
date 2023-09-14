@@ -26,7 +26,7 @@ const AppHeader = (props) => {
         console.log('bot config:');
         console.log(botConfig);
         versions = botConfig.botConfigVersion.dataVersions.sort((a,b)=>a.id-b.id).map(v =>
-            <Dropdown.Item eventKey={v.id} active={v.id === botConfig.currentVersion.id}>
+            <Dropdown.Item key={v.id} eventKey={v.id} active={v.id === botConfig.currentVersion.id}>
                 {v.note}
             </Dropdown.Item>
         );
@@ -224,7 +224,7 @@ class Home extends React.Component {
         console.log("APP RENDER =====================")
         console.log(this.chapters)
         let chapters = this.state.chapters.map((c, i) =>
-            <Col className='px-0 col-12 col-sm-12 col-md-6 col-lg-6 col-xl-4 col-xxl-4 '>
+            <Col key={i} className='px-0 col-12 col-sm-12 col-md-6 col-lg-6 col-xl-4 col-xxl-4 '>
                 <ChapterForm key={i}
                              chapter={c}
                              chapters={this.chapters}

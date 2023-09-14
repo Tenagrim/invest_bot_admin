@@ -260,8 +260,9 @@ export default function ChapterForm(props) {
         const chaptersList = props.chapters
             .filter(ch=>(filterKey===0 || (ch.marksKey&filterKey))&&
                 (filterString ==='' || ch.note.toLowerCase().includes(filterString.toLowerCase())))
-            .map(c =>
+            .map((c,i) =>
                 <Dropdown.Item
+                    key={i}
                     eventKey={c.itemId}
                     active={c.itemId === button.targetChapterId}>
                     {'[' + c.itemId + '] ' + c.note}
@@ -334,11 +335,10 @@ export default function ChapterForm(props) {
 
     // console.log(JSON.stringify(buttonLists));
 
-    let buttons2 = buttonLists.map(l => {
-        let btt = l.sort((a, b) => b.id - a.id).map((b, i) => {
-            return (<Col className='px-1 flex-grow-1'>
+    let buttons2 = buttonLists.map((l,i) => {
+        let btt = l.sort((a, b) => b.id - a.id).map((b) => {
+            return (<Col key={b.id} className='px-1 flex-grow-1'>
                 <ChapterButton
-                    key={b.id}
                     button={b}
                     buttons={buttons}
                     chapters={props.chapters}
@@ -349,7 +349,7 @@ export default function ChapterForm(props) {
             </Col>);
         })
         return (
-            <Row className={'p-1 ' + 'row-cols-' + btt.length}>
+            <Row key={i} className={'p-1 ' + 'row-cols-' + btt.length}>
                 {btt}
             </Row>
         );
