@@ -5,7 +5,7 @@ import * as React from "react";
 import Dropdown from 'react-bootstrap/Dropdown';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 import MasksSelector from "../MarksSelector";
-import {API, API_URL} from "../AxiosInterceptor";
+import {API} from "../AxiosInterceptor";
 import {useNavigate} from "react-router-dom";
 
 
@@ -15,22 +15,33 @@ const AppHeader = (props) => {
     const navigate = useNavigate();
     const botConfig =props.botConfig;
 
-    let versions = []
+    let versions = [];
+    let editorVersions=[];
 
-    let note = ''
+    let note = '';
+    let editorNote = '';
 
     if (!!botConfig&& !!botConfig.currentVersion) {
         note = botConfig.currentVersion.note;
     }
     if (!!botConfig&&!!botConfig.botConfigVersion) {
-        console.log('bot config:');
-        console.log(botConfig);
+        // console.log('bot config:');
+        // console.log(botConfig);
         versions = botConfig.botConfigVersion.dataVersions.sort((a,b)=>a.id-b.id).map(v =>
             <Dropdown.Item key={v.id} eventKey={v.id} active={v.id === botConfig.currentVersion.id}>
                 {v.note}
             </Dropdown.Item>
         );
+        if(!!props.editorVersion){
+            editorNote = props.editorVersion.note;
+            editorVersions = botConfig.botConfigVersion.dataVersions.sort((a,b)=>a.id-b.id).map(v =>
+                <Dropdown.Item key={v.id} eventKey={v.id} active={props.editorVersion.id === botConfig.currentVersion.id}>
+                    {v.note}
+                </Dropdown.Item>
+            );
+        }
     }
+
 
     const onLogout =()=>{
         localStorage.removeItem("token");
@@ -46,19 +57,35 @@ const AppHeader = (props) => {
                             if(event === 'new')
                                 props.addVersion()
                             else
-                                props.setVersion(event)
+                                props.setEditorVersion(event)
                         }}
                         as={ButtonGroup}
                         key='Primary'
                         id={`dropdown-variants-primary`}
                         variant='primary'
-                        title={note}>
-                        {versions}
+                        title={editorNote}>
+                        {editorVersions}
                         <Dropdown.Divider />
 
                         <Dropdown.Item eventKey='new'>
                             Добавить версию
                         </Dropdown.Item>
+                    </DropdownButton>
+                </Col>
+                <Col className='col-auto'>
+                    <DropdownButton
+                        onSelect={event=>{
+                            if(event === 'new')
+                                props.addVersion()
+                            else
+                                props.setVersion(event)
+                        }}
+                        as={ButtonGroup}
+                        key='Danger'
+                        id={`dropdown-variants-danger`}
+                        variant='danger'
+                        title={note}>
+                        {versions}
                     </DropdownButton>
                 </Col>
                 <Col className='col-3'>
@@ -91,6 +118,7 @@ class Home extends React.Component {
             chapters: [],
             botConfig: {
                 chapterMarks:[]},
+            editorVersion:{},
             filterMarksKey: 0,
             filterString:''
         }
@@ -135,8 +163,8 @@ class Home extends React.Component {
         let result =  chapters
             .sort((a,b)=>a.itemId - b.itemId)
             .map((c,i)=>({...c, uid:i, changed:false})) // TODO
-        console.log('SORTED_CHAPTERS ====================')
-        console.log(result);
+        // console.log('SORTED_CHAPTERS ====================')
+        // console.log(result);
         return result;
     }
 
@@ -148,20 +176,25 @@ class Home extends React.Component {
             this.updateChapters(resp.data);
         })
     }
+    setEditorVersion(){}
 
     setVersion(targetVersionId){
         API.post('/config/setCurrentVersion',
             {sysName: BOT_SYSNAME, targetVersionId: targetVersionId},)
-            .then(resp => {
-                API.get('/chapters/' + resp.data.currentVersion.id)
-                    .then(s_resp => {
-                    let newState = {botConfig: resp.data, chapters: this.mapChapters(s_resp.data)}
-                    this.setState(newState, ()=>{
-                        console.log('SET STATE ========================');
-                        console.log(newState);
-                        // this.forceUpdate()
-                    });
-                })
+            .then(
+        //         resp => {
+        //         API.get('/chapters/' + resp.data.currentVersion.id)
+        //             .then(s_resp => {
+        //             let newState = {botConfig: resp.data, chapters: this.mapChapters(s_resp.data)}
+        //             this.setState(newState, ()=>{
+        //                 console.log('SET STATE ========================');
+        //                 console.log(newState);
+        //                 // this.forceUpdate()
+        //             });
+        //         })
+        // })
+        resp=>{
+            this.setState({botConfig: resp.data});
         })
     }
 
@@ -180,7 +213,8 @@ class Home extends React.Component {
         API.post('/config/getBySysName',{
             sysName: BOT_SYSNAME
         }).then(resp => {
-            this.setState({botConfig: resp.data});
+            let editorVersion = resp.data.botConfigVersion.dataVersions.sort((a,b)=>b.id-a.id)[0];
+            this.setState({botConfig: resp.data, editorVersion: editorVersion});
             this.updateChapters(resp.data);
         }).catch(()=>{
             console.error("something went wrong")
@@ -196,6 +230,12 @@ class Home extends React.Component {
                 note: 'Новый раздел',
                 chapterButtons: [],
                 chapterAttachements: [],
+                chapterParagraphs: [{
+                    id: null,
+                    placement: 0,
+                    text: 'Новый раздел',
+                    paragraphButtons:[]
+                }],
                 changed: true,
                 dataVersionId: this.state.botConfig.currentVersion.id,
                 chapterTypeId: 1, // TODO
@@ -221,8 +261,8 @@ class Home extends React.Component {
     }
 
     render() {
-        console.log("APP RENDER =====================")
-        console.log(this.chapters)
+        // console.log("APP RENDER =====================")
+        // console.log(this.chapters)
         let chapters = this.state.chapters.map((c, i) =>
             <Col key={i} className='px-0 col-12 col-sm-12 col-md-6 col-lg-6 col-xl-4 col-xxl-4 '>
                 <ChapterForm key={i}
@@ -238,7 +278,9 @@ class Home extends React.Component {
             <Container className="p-3">
                 <AppHeader
                     botConfig={this.state.botConfig}
+                    editorVersion={this.state.editorVersion}
                     setVersion={this.setVersion}
+                    setEditorVersion={this.setEditorVersion}
                     addVersion={this.addVersion}
                     marksList={!!this.state.botConfig? this.state.botConfig.chapterMarks:[]}
                     marksKey={this.state.filterMarksKey}
@@ -250,7 +292,7 @@ class Home extends React.Component {
                     <Row>
                         {chapters}
                         {/*{addButton}*/}
-                        <Col className='px-0 col-lg-3 col-sm-12' hidden={this.state.filterMarksKey!==0}>
+                        <Col className='px-0 col-12 col-sm-12 col-md-6 col-lg-6 col-xl-4 col-xxl-4 ' hidden={this.state.filterMarksKey!==0}>
                             <Container className='bg-light rounded-3 m-1 p-2 h-100'>
                                 <Card className={'h-100'}>
                                     <Button className='btn-light m-3 h-100' onClick={this.addChapter}> Добавить раздел</Button>

@@ -11,8 +11,8 @@ const API = axios.create({
         'Content-Type': 'application/json',
     },
     transformRequest: [function (data, headers) {
-        console.log("data:   =======================");
-        console.log(data);
+        // console.log("data:   =======================");
+        // console.log(data);
         // You may modify the headers object here
         headers['Authorization'] = `Bearer ${localStorage.getItem('token')}`
         // Do not change data
