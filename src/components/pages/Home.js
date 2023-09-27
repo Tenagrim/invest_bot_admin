@@ -35,7 +35,7 @@ const AppHeader = (props) => {
         if(!!props.editorVersion){
             editorNote = props.editorVersion.note;
             editorVersions = botConfig.botConfigVersion.dataVersions.sort((a,b)=>a.id-b.id).map(v =>
-                <Dropdown.Item key={v.id} eventKey={v.id} active={props.editorVersion.id === botConfig.currentVersion.id}>
+                <Dropdown.Item key={v.id} eventKey={v.id} active={props.editorVersion.id === v.id}>
                     {v.note}
                 </Dropdown.Item>
             );
@@ -57,7 +57,7 @@ const AppHeader = (props) => {
                             if(event === 'new')
                                 props.addVersion()
                             else
-                                props.setEditorVersion(event)
+                                props.setEditorVersion(Number(event))
                         }}
                         as={ButtonGroup}
                         key='Primary'
@@ -129,6 +129,7 @@ class Home extends React.Component {
         this.setFilterMark = this.setFilterMark.bind(this)
         this.unsetFilterMark = this.unsetFilterMark.bind(this)
         this.setFilterString = this.setFilterString.bind(this)
+        this.setEditorVersion = this.setEditorVersion.bind(this)
     }
 
 
@@ -169,14 +170,23 @@ class Home extends React.Component {
     }
 
     addVersion(){
-        API.post('/config/createVersionFromCurrent',{
-            sysName: BOT_SYSNAME
+        API.post('/config/createVersionFromTarget',{
+            sysName: BOT_SYSNAME,
+            targetVersionId: this.state.c
         }).then(resp=>{
-            this.setState({botConfig: resp.data})
-            this.updateChapters(resp.data);
+            // if (!!resp.data.currentVersion) {
+                this.setState({editorVersion: resp.data})
+                this.updateChapters(resp.data);
+            // }
         })
     }
-    setEditorVersion(){}
+    setEditorVersion(targetVersionId){
+        let newActualVersion = this.state.botConfig.botConfigVersion.dataVersions.find(v=>v.id===targetVersionId)
+        if(!!newActualVersion && newActualVersion.id !== this.state.editorVersion.id){
+            this.setState({editorVersion: newActualVersion});
+            this.updateChapters(newActualVersion);
+        }
+    }
 
     setVersion(targetVersionId){
         API.post('/config/setCurrentVersion',
@@ -198,15 +208,14 @@ class Home extends React.Component {
         })
     }
 
-    updateChapters(config){
-        if (!!config.currentVersion) {
-            API.get('/chapters/' + config.currentVersion.id,)
+    updateChapters(version){
+            API.get('/chapters/' + version.id,)
                 .then(resp => {
                     let chs = this.mapChapters(resp.data)
                     this.chapters = chs;
                     this.setState({chapters: chs});
                 })
-        }
+
     }
 
     componentDidMount() {
@@ -215,7 +224,7 @@ class Home extends React.Component {
         }).then(resp => {
             let editorVersion = resp.data.botConfigVersion.dataVersions.sort((a,b)=>b.id-a.id)[0];
             this.setState({botConfig: resp.data, editorVersion: editorVersion});
-            this.updateChapters(resp.data);
+            this.updateChapters(editorVersion);
         }).catch(()=>{
             console.error("something went wrong")
         })
