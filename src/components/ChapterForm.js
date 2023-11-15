@@ -123,6 +123,7 @@ export default function ChapterForm(props) {
         let newParagraph={
             id:null,
             text:'Новый раздел',
+            note: 'Новый подраздел',
             placement: maxPLacement + 1,
             paragraphButtons:[],
             uid: paragraphs.length + 1

@@ -2,6 +2,7 @@ import {Button, ButtonGroup, Card, Col, Form, Row} from "react-bootstrap";
 import ParagraphButton from "./ParagraphButton";
 import * as React from "react";
 import {useState} from "react";
+import EditableText from "./EditableText";
 
 export default  function  ChapterParagraph(props){
 
@@ -60,6 +61,14 @@ export default  function  ChapterParagraph(props){
         props.remove(!!P.id? P.id : P.uid);
     }
 
+    const setNoteText = (text) => {
+        if (text !== props.paragraph.note) {
+            props.paragraph.note = text;
+            props.change();
+        }
+
+    }
+
     let buttonGroups = props.paragraph.paragraphButtons.reduce((group, ch) => {
         const {placement} = ch;
         group.set(placement, group.get(placement) ?? []);
@@ -95,6 +104,13 @@ export default  function  ChapterParagraph(props){
 
     return (
         <Card>
+            <Card.Header>
+                <Row className=''>
+                    <Col className=''>
+                        <EditableText setClass={'fw-bold'} initialText={props.paragraph.note} setText={(setNoteText)}/>
+                    </Col>
+                </Row>
+            </Card.Header>
             <Card.Body className='pt-0'>
                 <Col className='col-12' hidden={props.hiddenMenu}>
                     <Row className='justify-content-end'>
